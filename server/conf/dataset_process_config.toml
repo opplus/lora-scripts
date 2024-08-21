@@ -1,0 +1,19 @@
+[upscale]
+enable_upscale = false
+upscale_minsize = 1920
+realesrgan_model= "RealESRGAN_x4plus"
+realesrgan_model_path= "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
+outscale= 2
+min_side= 768
+max_side= 1024
+[face_enhance]
+enablce_face_enhance= true
+weight= 0.7
+enable_upscale = false
+realesrgan_model= "RealESRGAN_x4plus"
+realesrgan_model_path= "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
+outscale= 1
+[tag]
+tag_type = "tag"
+florence_task = "detailed_caption"
+filter_tags_keywords = "eye,ear,cheek,tooth,nose"

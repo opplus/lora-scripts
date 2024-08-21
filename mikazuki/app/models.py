@@ -4,6 +4,8 @@ from typing import List, Optional, Union, Dict, Any
 
 class TaggerInterrogateRequest(BaseModel):
     path: str
+    images: list=[]
+    train_repeat:int=10
     interrogator_model: str = Field(
         default="wd14-convnextv2-v2"
     )

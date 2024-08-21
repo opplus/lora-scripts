@@ -120,4 +120,11 @@ class TaskManager:
         ]
 
 
-tm = TaskManager()
+allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
+log.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
+if bool(allowd_gpu_ids)==False:
+    tm = TaskManager()
+else:
+    max_concurrent=len(allowd_gpu_ids.split(","))
+    log.info(f'TaskManager init max_concurrent:{max_concurrent}')
+    tm = TaskManager(max_concurrent=max_concurrent)

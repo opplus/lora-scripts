@@ -47,6 +47,13 @@ def run_tag_editor():
             cmd.extend(["--localization", "zh-Hans"])
     subprocess.Popen(cmd)
 
+@catch_exception
+def run_celery():
+    base_dir=base_dir_path()
+    script_path=f'{base_dir}/celery_server.sh'
+    log.info(f"Starting run_celery {script_path}...")
+    subprocess.Popen(script_path, shell=True)
+
 
 def launch():
     log.info("Starting SD-Trainer Mikazuki GUI...")

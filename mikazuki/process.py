@@ -7,9 +7,46 @@ from typing import Optional
 from mikazuki.app.models import APIResponse
 from mikazuki.log import log
 from mikazuki.tasks import tm
+import GPUtil
+server_ip = os.getenv("SERVER_IP")
+
+def lock_gpu(gpu_memory_threshold=20):
+    GPUs = GPUtil.getGPUs()
+    allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
+    log.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
+    for gpu in GPUs:
+        log.info(f'gpu:{gpu.id}')
+    for gpu in GPUs:
+        if bool(allowd_gpu_ids)==False or str(gpu.id) in allowd_gpu_ids.split(","):
+            if gpu.memoryFree > gpu_memory_threshold * 1024:
+                lock_name = f"{server_ip}:GPU{gpu.id}"
+                from server.util.RedisClient import redis_client
+                # 尝试获取锁
+                if redis_client.set(
+                        lock_name, "1", nx=True, ex=100
+                ):  # 如果成功获取锁，设置过期时间为100秒
+                    return gpu.id, lock_name
+    return None, None
 
 
 def run_train(toml_path: str,
+              trainer_file: str = "./sd-scripts/train_network.py",
+              gpu_ids: Optional[list] = None,
+              cpu_threads: Optional[int] = 2):
+    device_id, lock_name = lock_gpu()
+    log.info(f"device_id, lock_name:{device_id, lock_name}")
+    if device_id is not None:  # 如果设备可用
+        try:
+            return run_train_0(toml_path=toml_path,trainer_file=trainer_file,gpu_ids=[str(device_id)])
+        finally:
+            from server.util.RedisClient import redis_client
+            redis_client.delete(lock_name)
+    else:
+        log.error(f"An error occurred when training / 训练无可用资源，请稍后再试")
+        return APIResponse(status="fail", message=f"训练无可用资源，请稍后再试")
+
+
+def run_train_0(toml_path: str,
               trainer_file: str = "./sd-scripts/train_network.py",
               gpu_ids: Optional[list] = None,
               cpu_threads: Optional[int] = 2):

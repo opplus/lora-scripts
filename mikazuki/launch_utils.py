@@ -210,7 +210,8 @@ def setup_onnxruntime():
 
         log.info(f"installing onnxruntime")
         run_pip(f"install onnxruntime=={onnx_version}", f"onnxruntime", live=True)
-        run_pip(f"install onnxruntime-gpu=={onnx_version}", f"onnxruntime-gpu", live=True)
+        run_pip(f"install onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/", f"onnxruntime-gpu", live=True)
+        # run_pip(f"install onnxruntime-gpu=={onnx_version}", f"onnxruntime-gpu", live=True)
 
 
 def run_pip(command, desc=None, live=False):
@@ -251,7 +252,7 @@ def prepare_environment():
 
     validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
-    setup_onnxruntime()
+    # setup_onnxruntime()
 
 
 def catch_exception(f):

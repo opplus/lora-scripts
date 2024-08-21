@@ -14,6 +14,7 @@ from PIL import UnidentifiedImageError
 from huggingface_hub import hf_hub_download
 
 from mikazuki.tagger import dbimutils, format
+from mikazuki.log import log
 
 tag_escape_pattern = re.compile(r'([\\()])')
 
@@ -83,7 +84,7 @@ class Interrogator:
         if hasattr(self, 'model') and self.model is not None:
             del self.model
             unloaded = True
-            print(f'Unloaded {self.name}')
+            log.info(f'Unloaded {self.name}')
 
         if hasattr(self, 'tags'):
             del self.tags
@@ -114,7 +115,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         self.kwargs = kwargs
 
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        print(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
+        log.info(f"Loading {self.name} model file from {self.kwargs['repo_id']} model_path:{self.model_path}, tags_path:{self.tags_path}")
 
         model_path = Path(hf_hub_download(
             **self.kwargs, filename=self.model_path))
@@ -123,7 +124,8 @@ class WaifuDiffusionInterrogator(Interrogator):
         return model_path, tags_path
 
     def load(self) -> None:
-        model_path, tags_path = self.download()
+        model_path = self.model_path
+        tags_path = self.tags_path
 
         # only one of these packages should be installed at a time in any one environment
         # https://onnxruntime.ai/docs/get-started/with-python.html#install-onnx-runtime
@@ -147,7 +149,7 @@ class WaifuDiffusionInterrogator(Interrogator):
 
         self.model = InferenceSession(str(model_path), providers=providers)
 
-        print(f'Loaded {self.name} model from {model_path}')
+        log.info(f'Loaded {self.name} model from {model_path}')
 
         self.tags = pd.read_csv(tags_path)
 
@@ -160,6 +162,7 @@ class WaifuDiffusionInterrogator(Interrogator):
     ]:
         # init model
         if not hasattr(self, 'model') or self.model is None:
+            log.info(f"Loading model ...")
             self.load()
 
         # code for converting the image and running the model is taken from the link below
@@ -205,14 +208,20 @@ available_interrogators = {
     'wd-convnext-v3': WaifuDiffusionInterrogator(
         'wd-convnext-v3',
         repo_id='SmilingWolf/wd-convnext-tagger-v3',
+        model_path='./sd-models/wd-convnext-v3/model.onnx',
+        tags_path='./sd-models/wd-convnext-v3/selected_tags.csv',
     ),
     'wd-swinv2-v3': WaifuDiffusionInterrogator(
         'wd-swinv2-v3',
         repo_id='SmilingWolf/wd-swinv2-tagger-v3',
+        model_path='./sd-models/wd-swinv2-v3/model.onnx',
+        tags_path='./sd-models/wd-swinv2-v3/selected_tags.csv',
     ),
     'wd-vit-v3': WaifuDiffusionInterrogator(
         'wd14-vit-v3',
         repo_id='SmilingWolf/wd-vit-tagger-v3',
+        model_path='./sd-models/wd-vit-v3/model.onnx',
+        tags_path='./sd-models/wd-vit-v3/selected_tags.csv',
     ),
     'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
         'wd14-convnextv2-v2', repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
@@ -270,6 +279,7 @@ def on_interrogate(
         split_str(replace_underscore_excludes),
         escape_tag
     )
+    log.info(f"on_interrogate {postprocess_opts} ")
 
     # batch process
     batch_input_glob = batch_input_glob.strip()
@@ -292,7 +302,7 @@ def on_interrogate(
 
         # check the input directory path
         if not os.path.isdir(base_dir):
-            print('input path is not a directory / 输入的路径不是文件夹，终止识别')
+            log.info('input path is not a directory / 输入的路径不是文件夹，终止识别')
             return 'input path is not a directory'
 
         # this line is moved here because some reason
@@ -309,14 +319,14 @@ def on_interrogate(
             if '.' + p.split('.').pop().lower() in supported_extensions
         ]
 
-        print(f'found {len(paths)} image(s)')
+        log.info(f'found {len(paths)} image(s)')
 
         for path in paths:
             try:
                 image = Image.open(path)
             except UnidentifiedImageError:
                 # just in case, user has mysterious file...
-                print(f'${path} is not supported image type')
+                log.info(f'${path} is not supported image type')
                 continue
 
             # guess the output path
@@ -350,7 +360,7 @@ def on_interrogate(
                 output.append(output_path.read_text(errors='ignore').strip())
 
                 if batch_output_action_on_conflict == 'ignore':
-                    print(f'skipping {path}')
+                    log.info(f'skipping {path}')
                     continue
 
             ratings, tags = interrogator.interrogate(image)
@@ -359,8 +369,8 @@ def on_interrogate(
                 *postprocess_opts
             )
 
-            # TODO: switch for less print
-            print(
+            # TODO: switch for less log.info
+            log.info(
                 f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
             )
 
@@ -393,7 +403,7 @@ def on_interrogate(
                     json.dumps([ratings, tags])
                 )
 
-        print('all done / 识别完成')
+        log.info('all done / 识别完成')
 
     if unload_model_after_running:
         interrogator.unload()

@@ -17,6 +17,8 @@ from mikazuki.app.api import router as api_router
 from mikazuki.app.proxy import router as proxy_router
 from mikazuki.utils.devices import check_torch_gpu
 
+from server.api  import router as server_api_router
+
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
 
@@ -71,6 +73,7 @@ async def add_cache_control_header(request, call_next):
     return response
 
 app.include_router(api_router, prefix="/api")
+app.include_router(server_api_router, prefix="/vapi")
 # app.include_router(ipc_router, prefix="/ipc")
 
 

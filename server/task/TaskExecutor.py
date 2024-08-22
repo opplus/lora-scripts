@@ -209,7 +209,7 @@ class LoraTrainTaskExecutor(TaskExecutor):
         os_output_dir = os.path.join(os.getcwd(), f"output/{output_dir_prefix}")
 
         trainer_file = trainer_mapping[model_train_type]
-        validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"])
+        validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"],model_train_type)
         if not validated:
             raise RuntimeError(message)
 

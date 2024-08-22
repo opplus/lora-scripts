@@ -21,6 +21,8 @@ config/autosave/*
 !logs/.keep
 
 tests/
-
+docker/
+dataset/
+huggingface/
 huggingface/hub/models*
 huggingface/hub/version_diffusers_cache.txt

@@ -250,7 +250,7 @@ def prepare_environment():
     # if not check_run("mikazuki/scripts/torch_check.py"):
     #     sys.exit(1)
 
-    validate_requirements("requirements.txt")
+    # validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
     # setup_onnxruntime()
 

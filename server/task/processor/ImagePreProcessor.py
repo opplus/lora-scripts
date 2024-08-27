@@ -71,7 +71,7 @@ def image_pre_processor(dataset_dir: str, device_id):
             seg_body_batch(segbody_config, paths, device_id)
 
         if cropface_config is not None and cropface_config['enable_cropface'] == True:
-            cropface_config(cropface_config, paths, device_id)
+            crop_face_batch(cropface_config, paths, device_id)
 
         if face_enhance_config is not None and face_enhance_config['enablce_face_enhance'] == True:
             face_enhance_batch(face_enhance_config, paths, device_id)

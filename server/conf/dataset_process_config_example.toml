@@ -25,4 +25,5 @@ enable_cropface = false
 [tag]
 tag_type = "tag"
 florence_task = "detailed_caption"
-filter_tags_keywords = "eye,ear,cheek,tooth,nose"
+filter_tags_keywords = "eye,ear,cheek,tooth,nose,transparent_background"
+added_fixed_tags="simple_background,white_background"

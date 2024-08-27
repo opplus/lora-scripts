@@ -22,10 +22,14 @@ def image_tag_filter_processor(dataset_dir: str):
     filter_tags_keywords_str = tag_filter_config[
         'filter_tags_keywords'] if tag_filter_config is not None and "filter_tags_keywords" in tag_filter_config else ""
     filter_tags_keywords = filter_tags_keywords_str.split(",") if len(filter_tags_keywords_str) > 0 else []
-    if len(filter_tags_keywords) == 0:
-        logger.info("filter_tags_keywords is empty")
+    added_tags_keywords_str = tag_filter_config[
+        'added_fixed_tags'] if tag_filter_config is not None and "added_fixed_tags" in tag_filter_config else ""
+    added_tags_keywords = added_tags_keywords_str.split(",") if len(added_tags_keywords_str) > 0 else []
+    if len(filter_tags_keywords) == 0 or len(added_tags_keywords) == 0:
+        logger.info("filter_tags_keywords or added_tags_keywords is empty")
         return
     logger.info(f"find filter_tags_keywords {len(filter_tags_keywords)},details: {filter_tags_keywords_str} ")
+    logger.info(f"find added_tags_keywords {len(added_tags_keywords)},details: {added_tags_keywords_str} ")
 
     if not dataset_dir.endswith('*'):
         if not dataset_dir.endswith(os.sep):
@@ -64,21 +68,30 @@ def image_tag_filter_processor(dataset_dir: str):
         # 标签过滤
         final_tags = []
         filter_tags = []
-        for tag in output:
-            filter_flag=False
-            for filter_tag in filter_tags_keywords:
-                if filter_tag in tag:
-                    filter_tags.append(tag)
-                    filter_flag=True
-                    continue
-            if filter_flag==False:
-                 final_tags.append(tag)
+        if len(filter_tags_keywords) > 0:
+            for tag in output:
+                filter_flag = False
+                for filter_tag in filter_tags_keywords:
+                    if filter_tag in tag:
+                        filter_tags.append(tag)
+                        filter_flag = True
+                        continue
+                if filter_flag == False:
+                    final_tags.append(tag)
+        else:
+            final_tags = output
+        if len(added_tags_keywords) > 0:
+            for added_tag in added_tags_keywords:
+                if added_tag not in final_tags:
+                    final_tags.append(added_tag)
+
         logger.info(
             f'filter complete final_tags:{len(final_tags)}, filter_tags:{len(filter_tags)} from {path}, filtered detail {json.dumps(filter_tags)}'
         )
+
         path.write_text(
             ', '.join(final_tags),
             encoding='utf-8'
         )
 
-    logger.info('标签过滤完成')
+    logger.info('标签过滤/追加完成')

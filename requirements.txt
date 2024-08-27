@@ -44,3 +44,4 @@ redis==5.0.5
 gputil==1.4.0
 oss2==2.18.5
 realesrgan==0.3.0
+alibabacloud_imageseg20191230

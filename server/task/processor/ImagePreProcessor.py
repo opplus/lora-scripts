@@ -1,5 +1,4 @@
 import json
-
 import os
 import re
 import time
@@ -8,15 +7,17 @@ from pathlib import Path
 
 from PIL import Image
 
-
 from CodeFormer.functions_codeformer import load_face_mode, unload_face_mode, face_enhance
-from server.util.functions_upscale import upscale_image, load_mode, unload_mode
+from server.func.aliyun.aliyun_seg import init_aliseg
+from server.func.functions_segbody import do_segbody
+from server.func.functions_upscale import upscale_image, load_mode, unload_mode
 from server.util.settings import get_dataset_process_config_by_name
 
 tag_escape_pattern = re.compile(r'([\\()])')
 
 import logging
 from celery.utils.log import get_task_logger
+
 logger = get_task_logger(__name__)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -28,6 +29,8 @@ def image_pre_processor(dataset_dir: str, device_id):
     try:
         face_enhance_config = get_dataset_process_config_by_name("face_enhance")
         upscale_config = get_dataset_process_config_by_name("upscale")
+        segbody_config = get_dataset_process_config_by_name("segbody")
+        cropface_config = get_dataset_process_config_by_name("cropface")
         if (upscale_config == None or upscale_config['enable_upscale'] == False) and (
                 face_enhance_config == None or face_enhance_config['enablce_face_enhance'] == False):
             logger.info("enable_upscale or enablce_face_enhance is disable")
@@ -64,16 +67,63 @@ def image_pre_processor(dataset_dir: str, device_id):
         ]
 
         logger.info(f'found {len(paths)} images(s)')
+        if segbody_config is not None and segbody_config['enable_segbody'] == True:
+            seg_body_batch(segbody_config, paths, device_id)
+
+        if cropface_config is not None and cropface_config['enable_cropface'] == True:
+            cropface_config(cropface_config, paths, device_id)
+
         if face_enhance_config is not None and face_enhance_config['enablce_face_enhance'] == True:
             face_enhance_batch(face_enhance_config, paths, device_id)
+
         if upscale_config is not None and upscale_config['enable_upscale'] == True:
             up_scale_batch(upscale_config, paths, device_id)
+
     except Exception as e:
         logger.exception(f"image_pre_processor error {dataset_dir}")
     finally:
         t1 = time.time()
         logger.info(f"******图片预处理完成 cost {t1 - t0} seconds for dataset:{dataset_dir}******")
 
+
+def seg_body_batch(segbody_config, paths, device_id):
+    ali_seg_config = init_aliseg(
+        segbody_config['ak'],
+        segbody_config['sk'],
+        segbody_config['endpoint'],
+        segbody_config['region'],
+    )
+    for path in paths:
+        t0 = time.time()
+        try:
+            image = Image.open(path).convert("RGB")
+            ori_width, ori_height = image.size
+            seged_img = do_segbody(path, ali_seg_config)
+            # 还原尺寸
+            image = seged_img.resize(size=(ori_width, ori_height), resample=Image.Resampling.BILINEAR)
+            logger.info(f'segbody for image {path}')
+            image.save(path, quality=95)
+        except Exception as e:
+            logger.exception(f'${path} seg_body_batch error: {e}')
+        finally:
+            t1 = time.time()
+            logger.info(f"******seg_body_batch cost {t1 - t0} seconds for path:{path}******")
+
+
+def crop_face_batch(cropface_config, paths, device_id):
+    for path in paths:
+        t0 = time.time()
+        try:
+            image = Image.open(path).convert("RGB")
+            ori_width, ori_height = image.size
+            # 还原尺寸
+            logger.info(f'cropface for image {path}')
+            image.save(path, quality=95)
+        except Exception as e:
+            logger.exception(f'${path} crop_face_batch error: {e}')
+        finally:
+            t1 = time.time()
+            logger.info(f"******crop_face_batch cost {t1 - t0} seconds for path:{path}******")
 
 
 def up_scale_batch(upscale_config, paths, device_id):
@@ -160,7 +210,8 @@ def face_enhance_batch(enhance_config, paths, device_id):
             absolute_path = str(path.resolve())
             # 人脸增强
             face_enhance(
-                net=net, face_helper=face_helper, face_path=absolute_path, out_path=absolute_path, device_id=device_id, w=weight, upsampler=upsampler, outscale=outscale
+                net=net, face_helper=face_helper, face_path=absolute_path, out_path=absolute_path, device_id=device_id,
+                w=weight, upsampler=upsampler, outscale=outscale
             )
             image = Image.open(path)
             up_width, up_height = image.size
@@ -168,7 +219,7 @@ def face_enhance_batch(enhance_config, paths, device_id):
             image = image.resize(size=(ori_width, ori_height), resample=Image.Resampling.BILINEAR)
             resized_width, resized_height = image.size
             logger.info(
-                 f'resize_img [{up_width},{up_height}] >>> [{resized_width},{resized_height}] for image {path}')
+                f'resize_img [{up_width},{up_height}] >>> [{resized_width},{resized_height}] for image {path}')
             image.save(path, quality=95)
         except Exception as e:
             logger.exception(f'${path} face_enhance error: {e}')

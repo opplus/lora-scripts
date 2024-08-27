@@ -1,18 +1,27 @@
 [upscale]
 enable_upscale = false
 upscale_minsize = 1920
-realesrgan_model= "RealESRGAN_x4plus"
-realesrgan_model_path= "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
-outscale= 2
-min_side= 768
-max_side= 1024
+realesrgan_model = "RealESRGAN_x4plus"
+realesrgan_model_path = "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
+outscale = 2
+min_side = 768
+max_side = 1024
 [face_enhance]
-enablce_face_enhance= true
-weight= 0.7
+enablce_face_enhance = true
+weight = 0.7
 enable_upscale = false
-realesrgan_model= "RealESRGAN_x4plus"
-realesrgan_model_path= "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
-outscale= 1
+realesrgan_model = "RealESRGAN_x4plus"
+realesrgan_model_path = "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"
+outscale = 1
+[segbody]
+enable_segbody = false
+ali_ak = ""
+ali_sk = ""
+ali_endpoint = ""
+ali_region = ""
+[cropface]
+enable_cropface = false
+
 [tag]
 tag_type = "tag"
 florence_task = "detailed_caption"

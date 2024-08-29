@@ -8,7 +8,9 @@ min_side = 768
 max_side = 1024
 [face_enhance]
 enablce_face_enhance = true
-weight = 0.7
+weight = 0.5
+face_crop= true
+face_crop_resize= 1024
 enable_upscale = false
 realesrgan_model = "RealESRGAN_x4plus"
 realesrgan_model_path = "sd-models/RealESRGAN/RealESRGAN_x4plus.pth"

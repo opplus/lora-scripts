@@ -7,8 +7,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from CodeFormer.functions_codeformer import load_face_mode, unload_face_mode, face_enhance
 from server.func.aliyun.aliyun_seg import init_aliseg
+from server.func.functions_face_enhance import load_face_mode, unload_face_mode, face_enhance
 from server.func.functions_segbody import do_segbody
 from server.func.functions_upscale import upscale_image, load_mode, unload_mode
 from server.util.settings import get_dataset_process_config_by_name
@@ -30,7 +30,6 @@ def image_pre_processor(dataset_dir: str, device_id):
         face_enhance_config = get_dataset_process_config_by_name("face_enhance")
         upscale_config = get_dataset_process_config_by_name("upscale")
         segbody_config = get_dataset_process_config_by_name("segbody")
-        cropface_config = get_dataset_process_config_by_name("cropface")
         if (upscale_config == None or upscale_config['enable_upscale'] == False) and (
                 face_enhance_config == None or face_enhance_config['enablce_face_enhance'] == False):
             logger.info("enable_upscale or enablce_face_enhance is disable")
@@ -69,9 +68,6 @@ def image_pre_processor(dataset_dir: str, device_id):
         logger.info(f'found {len(paths)} images(s)')
         if segbody_config is not None and segbody_config['enable_segbody'] == True:
             seg_body_batch(segbody_config, paths, device_id)
-
-        if cropface_config is not None and cropface_config['enable_cropface'] == True:
-            crop_face_batch(cropface_config, paths, device_id)
 
         if face_enhance_config is not None and face_enhance_config['enablce_face_enhance'] == True:
             face_enhance_batch(face_enhance_config, paths, device_id)
@@ -182,12 +178,13 @@ def up_scale_batch(upscale_config, paths, device_id):
 def face_enhance_batch(enhance_config, paths, device_id):
     enablce_face_enhance = enhance_config[
         "enablce_face_enhance"] if enhance_config != None and "enablce_face_enhance" in enhance_config else False
-    enable_upscale = enhance_config[
-        "enable_upscale"] if enhance_config != None and "enable_upscale" in enhance_config else False
     if enablce_face_enhance == False:
         return
+    enable_upscale = enhance_config["enable_upscale"] if "enable_upscale" in enhance_config else False
     weight = enhance_config["weight"] if "weight" in enhance_config else 0.7
     outscale = enhance_config["outscale"] if "outscale" in enhance_config else 2
+    face_crop = enhance_config["face_crop"] if "face_crop" in enhance_config else False
+    face_crop_resize = enhance_config["face_crop_resize"] if "face_crop_resize" in enhance_config else None
 
     upsampler = None
     if enable_upscale == True:
@@ -211,10 +208,13 @@ def face_enhance_batch(enhance_config, paths, device_id):
             # 人脸增强
             face_enhance(
                 net=net, face_helper=face_helper, face_path=absolute_path, out_path=absolute_path, device_id=device_id,
-                w=weight, upsampler=upsampler, outscale=outscale
+                w=weight, upsampler=upsampler, outscale=outscale,
+                face_crop=face_crop
             )
             image = Image.open(path)
             up_width, up_height = image.size
+            if face_crop and face_crop_resize is not None:
+                ori_width, ori_height = face_crop_resize, face_crop_resize
             # 还原尺寸
             image = image.resize(size=(ori_width, ori_height), resample=Image.Resampling.BILINEAR)
             resized_width, resized_height = image.size

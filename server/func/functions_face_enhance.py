@@ -64,7 +64,8 @@ def unload_face_mode(net, face_helper):
         logger.exception(f"face_ehance unload model error")
 
 
-def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsampler=None, outscale=2):
+def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsampler=None, outscale=2,
+                 face_crop=False):
     face_helper.clean_all()
     img = cv2.imread(face_path, cv2.IMREAD_COLOR)
     face_helper.read_image(img)
@@ -96,19 +97,25 @@ def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsamp
 
     # paste_back
 
-    # upsample the background
-    if upsampler is not None:
-        # Now only support RealESRGAN for upsampling background
-        bg_img = upsampler.enhance(img, outscale=outscale)[0]
+    if face_crop:
+        face_helper.get_inverse_affine(None)
+        restored_img = face_helper.process_face_with_crop(face_upsampler=upsampler)
     else:
-        bg_img = None
-    face_helper.get_inverse_affine(None)
-    # paste each restored face to the input image
-    if upsampler is not None:
-        restored_img = face_helper.paste_faces_to_input_image(upsample_img=bg_img, draw_box=False,
-                                                              face_upsampler=upsampler)
-    else:
-        restored_img = face_helper.paste_faces_to_input_image(upsample_img=bg_img, draw_box=False)
+        # upsample the background
+        if upsampler is not None:
+            # Now only support RealESRGAN for upsampling background
+            bg_img = upsampler.enhance(img, outscale=outscale)[0]
+        else:
+            bg_img = None
+        face_helper.get_inverse_affine(None)
+        # paste each restored face to the input image
+        if upsampler is not None:
+            restored_img = face_helper.paste_faces_to_input_image(upsample_img=bg_img, draw_box=False,
+                                                                  face_upsampler=upsampler)
+        else:
+            restored_img = face_helper.paste_faces_to_input_image(upsample_img=bg_img, draw_box=False)
+
+
 
     # save restored img
     imwrite(restored_img, out_path)

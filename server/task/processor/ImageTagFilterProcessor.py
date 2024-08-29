@@ -82,9 +82,13 @@ def image_tag_filter_processor(dataset_dir: str):
             final_tags = output
         if len(added_tags_keywords) > 0:
             for added_tag in added_tags_keywords:
+                exist = False
                 for final_tag_0 in final_tags:
-                    if added_tag not in final_tag_0:
-                        final_tags.append(added_tag)
+                    if added_tag in final_tag_0:
+                        exist = True
+                        break
+                if exist == False:
+                    final_tags.append(added_tag)
 
         logger.info(
             f'filter complete final_tags:{len(final_tags)}, filter_tags:{len(filter_tags)} from {path}, filtered detail {json.dumps(filter_tags)}'

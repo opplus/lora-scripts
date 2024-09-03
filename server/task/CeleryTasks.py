@@ -25,7 +25,7 @@ logging.basicConfig(
 )
 
 
-def lock_gpu(gpu_memory_threshold=22, timeout=30,retry_interval=5):
+def lock_gpu(gpu_memory_threshold=20, timeout=30,retry_interval=5):
     t1 = int(time.time())
     while True:
         t2 = int(time.time())
@@ -71,7 +71,7 @@ def process_dataset(
     task_id=self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
     allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
-    device_id, lock_name = lock_gpu(gpu_memory_threshold=22)
+    device_id, lock_name = lock_gpu(gpu_memory_threshold=20)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
         logger.info(f"process_dataset task {task_id}, {taskConfig}")

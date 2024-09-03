@@ -64,7 +64,7 @@ def unload_face_mode(net, face_helper):
         logger.exception(f"face_ehance unload model error")
 
 
-def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsampler=None, outscale=2,
+def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.5, upsampler=None, outscale=2,
                  face_crop=False):
     face_helper.clean_all()
     img = cv2.imread(face_path, cv2.IMREAD_COLOR)
@@ -73,7 +73,10 @@ def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsamp
     num_det_faces = face_helper.get_face_landmarks_5(only_center_face=True, resize=640, eye_dist_threshold=5)
     logger.info(f'\tdetect {num_det_faces} faces')
     # align and warp each face
-    face_helper.align_warp_face()
+    if face_crop:
+        face_helper.do_crop_face(expand_ratio=1)
+    else:
+        face_helper.align_warp_face()
 
     # face restoration for each cropped face
     for idx, cropped_face in enumerate(face_helper.cropped_faces):
@@ -81,26 +84,29 @@ def face_enhance(net, face_helper, face_path, out_path, device_id, w=0.7, upsamp
         cropped_face_t = img2tensor(cropped_face / 255., bgr2rgb=True, float32=True)
         normalize(cropped_face_t, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True)
         cropped_face_t = cropped_face_t.unsqueeze(0).to(f"cuda:{device_id}")
-
-        try:
-            with torch.no_grad():
-                output = net(cropped_face_t, w=w, adain=True)[0]
-                restored_face = tensor2img(output, rgb2bgr=True, min_max=(-1, 1))
-            del output
-            torch.cuda.empty_cache()
-        except Exception as error:
-            logger.info(f'\tFailed inference for CodeFormer: {error}')
+        if w>0:
+            try:
+                with torch.no_grad():
+                    output = net(cropped_face_t, w=w, adain=True)[0]
+                    restored_face = tensor2img(output, rgb2bgr=True, min_max=(-1, 1))
+                del output
+                torch.cuda.empty_cache()
+            except Exception as error:
+                logger.info(f'\tFailed inference for CodeFormer: {error}')
+                restored_face = tensor2img(cropped_face_t, rgb2bgr=True, min_max=(-1, 1))
+        else:
+            logger.info(f'\tskip enhance')
             restored_face = tensor2img(cropped_face_t, rgb2bgr=True, min_max=(-1, 1))
 
         restored_face = restored_face.astype('uint8')
         face_helper.add_restored_face(restored_face, cropped_face)
 
-    # paste_back
 
     if face_crop:
         face_helper.get_inverse_affine(None)
         restored_img = face_helper.process_face_with_crop(face_upsampler=upsampler)
     else:
+        # paste_back
         # upsample the background
         if upsampler is not None:
             # Now only support RealESRGAN for upsampling background

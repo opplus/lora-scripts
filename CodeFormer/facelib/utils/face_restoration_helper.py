@@ -357,6 +357,90 @@ class FaceRestoreHelper(object):
                 save_path = f'{path}_{idx:02d}.{self.save_ext}'
                 imwrite(cropped_face, save_path)
 
+
+
+    def do_crop_face(self, save_cropped_path=None, border_mode='constant', expand_ratio=0.2):
+        """Align and warp faces with face template without scaling, ensuring the cropped image is square and expanded by a fixed ratio."""
+        # 遍历所有检测到的人脸
+        max_height=self.input_img.shape[0]
+        max_width=self.input_img.shape[1]
+        for idx, landmark in enumerate(self.all_landmarks_5):
+            affine_matrix = cv2.estimateAffinePartial2D(landmark, self.face_template, method=cv2.LMEDS)[0]
+            self.affine_matrices.append(affine_matrix)
+            # 使用关键点计算裁剪区域
+            x_min = int(min(landmark[:, 0]))
+            x_max = int(max(landmark[:, 0]))
+            y_min = int(min(landmark[:, 1]))
+            y_max = int(max(landmark[:, 1]))
+            
+            # 计算宽度和高度
+            width = x_max - x_min
+            height = y_max - y_min
+            
+            # 确定正方形大小
+            size = max(width, height)
+            
+            # 计算中心点
+            # center_x = (x_min + x_max) // 2
+            # center_y = (y_min + y_max) // 2
+            
+            # 根据扩展比例调整正方形大小
+            expanded_size = int(size * (1 + expand_ratio))
+
+            # 计算最大的max expanded_size
+
+            expanded_size=min(expanded_size,x_min-0,max_width-x_max,y_min-0,max_height-y_max)
+
+            logger.info(f'expanded_size:{expanded_size}')
+            
+            # 计算裁剪区域的新边界
+            x_min = x_min - expanded_size
+            x_max = x_max + expanded_size
+            y_min = y_min - expanded_size
+            y_max = y_max + expanded_size
+            
+            # 确保裁剪区域在图像范围内
+            # x_min = max(x_min, 0)
+            # y_min = max(y_min, 0)
+            # x_max = min(x_max, self.input_img.shape[1])
+            # y_max = min(y_max, self.input_img.shape[0])
+            
+            # 计算实际裁剪区域的大小
+            # actual_width = x_max - x_min
+            # actual_height = y_max - y_min
+            
+            # # # 如果裁剪区域超出边界，调整裁剪区域大小
+            # if actual_width != expanded_size or actual_height != expanded_size:
+            #     # 计算实际裁剪区域与期望裁剪区域之间的差异
+            #     diff_x = expanded_size - actual_width
+            #     diff_y = expanded_size - actual_height
+                
+            #     # 分别调整 x 和 y 方向上的裁剪区域
+            #     x_min -= diff_x // 2
+            #     x_max += diff_x - (diff_x // 2)
+            #     y_min -= diff_y // 2
+            #     y_max += diff_y - (diff_y // 2)
+                
+            #     # 再次确保裁剪区域在图像范围内
+            #     x_min = max(x_min, 0)
+            #     y_min = max(y_min, 0)
+            #     x_max = min(x_max, self.input_img.shape[1])
+            #     y_max = min(y_max, self.input_img.shape[0])
+            
+            # 裁剪人脸区域
+            cropped_face = self.input_img[y_min:y_max, x_min:x_max]
+            self.cropped_faces.append(cropped_face)
+            # 保存裁剪后的人脸图像
+            if save_cropped_path is not None:
+                path = os.path.splitext(save_cropped_path)[0]
+                save_path = f'{path}_{idx:02d}.{self.save_ext}'
+                imwrite(cropped_face, save_path)
+                
+
+        
+        
+
+
     def get_inverse_affine(self, save_inverse_affine_path=None):
         """Get inverse affine matrix."""
         for idx, affine_matrix in enumerate(self.affine_matrices):

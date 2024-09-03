@@ -122,6 +122,7 @@ def do_interogator(dataset_dir: str, additional_tags, paths, device_id):
             logger.info(f"florence do_interogator {output_path} <<< {final_tag}")
         except Exception as e:
             logger.error(f'{path} do_interogator error: {e}')
+            processor.unload()
             raise e
         finally:
             t1 = time.time()

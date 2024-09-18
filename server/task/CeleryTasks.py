@@ -25,18 +25,18 @@ logging.basicConfig(
 )
 
 
-def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5):
+def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5,ex=100):
     t1 = int(time.time())
     while True:
         t2 = int(time.time())
         if t2 - t1 >= timeout:
             return None, None
-        device_id, lock_name = do_lock_gpu(gpu_memory_threshold)
+        device_id, lock_name = do_lock_gpu(gpu_memory_threshold,ex)
         if device_id is not None:
             return device_id, lock_name
         time.sleep(retry_interval)
 
-def do_lock_gpu(gpu_memory_threshold=16):
+def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     GPUs = GPUtil.getGPUs()
     allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
     logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
@@ -48,7 +48,7 @@ def do_lock_gpu(gpu_memory_threshold=16):
                 lock_name = f"{server_ip}:GPU{gpu.id}"
                 # 尝试获取锁
                 if redis_client.set(
-                        lock_name, "1", nx=True, ex=100
+                        lock_name, "1", nx=True, ex=ex
                 ):  # 如果成功获取锁，设置过期时间为100秒
                     return gpu.id, lock_name
     return None, None
@@ -120,7 +120,7 @@ def process_loratrain(
 ):
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
-    device_id, lock_name = lock_gpu()
+    device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=900)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
         logger.info(f"process_loratrain task {task_id}, {taskConfig}")

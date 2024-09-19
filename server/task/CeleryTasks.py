@@ -107,8 +107,8 @@ def process_dataset(
 @celery_app.task(
     bind=True,
     name="process_loratrain",
-    soft_time_limit=600,
-    hard_time_limit=1200,
+    soft_time_limit=1800,
+    hard_time_limit=2400,
     acks_late=True,
 )
 def process_loratrain(

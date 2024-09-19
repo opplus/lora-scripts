@@ -120,7 +120,7 @@ def process_loratrain(
 ):
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
-    device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=900)
+    device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=1800)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
         logger.info(f"process_loratrain task {task_id}, {taskConfig}")

@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import time
+import traceback
 from abc import abstractmethod
 from datetime import datetime
 
@@ -249,6 +250,8 @@ class LoraTrainTaskExecutor(TaskExecutor):
             logger.info(f"stderr:{stderr}")
         except:
             process.kill()
+            logger.error(f"Training ex")
+            logger.ex(traceback.format_exc())
             raise
         retcode = process.poll()
         t1 = time.time()

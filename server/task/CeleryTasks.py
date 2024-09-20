@@ -3,6 +3,7 @@ import logging
 import os
 import socket
 import time
+import traceback
 
 import GPUtil
 from celery.exceptions import Reject
@@ -41,9 +42,8 @@ def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
     logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
     for gpu in GPUs:
-        logger.info(f'gpu:{gpu.id}')
-    for gpu in GPUs:
         if bool(allowd_gpu_ids)==False or str(gpu.id) in allowd_gpu_ids.split(","):
+            logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFre}')
             if gpu.memoryFree > gpu_memory_threshold * 1024:
                 lock_name = f"{server_ip}:GPU{gpu.id}"
                 # 尝试获取锁
@@ -58,7 +58,7 @@ def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     bind=True,
     name="process_dataset",
     soft_time_limit=600,
-    hard_time_limit=1200,
+    time_limit=2400,
     acks_late=True,
 )
 def process_dataset(
@@ -86,6 +86,7 @@ def process_dataset(
             return ret
         except Exception as e:
             logger.exception(f"Task {task_id} failed due to an exception.")
+            logger.exception(traceback.format_exc())
             raise self.retry(exc=e, countdown=10, max_retries=3)  # 10秒后重试
         finally:
             try:
@@ -108,7 +109,7 @@ def process_dataset(
     bind=True,
     name="process_loratrain",
     soft_time_limit=1800,
-    hard_time_limit=2400,
+    time_limit=2400,
     acks_late=True,
 )
 def process_loratrain(
@@ -120,7 +121,7 @@ def process_loratrain(
 ):
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
-    device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=1800)
+    device_id, lock_name = lock_gpu(gpu_memory_threshold=18,ex=1800)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
         logger.info(f"process_loratrain task {task_id}, {taskConfig}")
@@ -134,7 +135,8 @@ def process_loratrain(
             return ret
         except Exception as e:
             logger.exception(f"Task {task_id} failed due to an exception.")
-            raise self.retry(exc=e, countdown=10, max_retries=3)  # 10秒后重试
+            logger.exception(traceback.format_exc())
+            raise self.retry(exc=e, countdown=30, max_retries=3)  # 30秒后重试
         finally:
             gc.collect()
             torch.cuda.empty_cache()

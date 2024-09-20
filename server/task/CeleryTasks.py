@@ -43,7 +43,7 @@ def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
     for gpu in GPUs:
         if bool(allowd_gpu_ids)==False or str(gpu.id) in allowd_gpu_ids.split(","):
-            logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFre}')
+            logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
             if gpu.memoryFree > gpu_memory_threshold * 1024:
                 lock_name = f"{server_ip}:GPU{gpu.id}"
                 # 尝试获取锁

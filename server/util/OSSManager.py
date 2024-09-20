@@ -1,6 +1,8 @@
 import os
 import oss2
-
+from celery.utils.log import get_task_logger
+# 设置日志
+logger = get_task_logger(__name__)
 
 class OSSManager:
     """创建oss桶"""
@@ -18,10 +20,12 @@ class OSSManager:
 
     def upload_to_oss(self, oss_image_path, local_image_path):
         """上传文件到OSS"""
+        logger.info(f'upload_to_oss {self.bucket_name} {local_image_path} from {local_image_path}')
         self.bucket.put_object_from_file(oss_image_path, local_image_path)
 
     def download_from_oss(self, oss_image_path, local_image_path):
         """从OSS下载文件"""
+        logger.info(f'download_from_oss {self.bucket_name} {local_image_path} to {local_image_path}')
         self.bucket.get_object_to_file(oss_image_path, local_image_path)
 
 

@@ -249,9 +249,11 @@ class LoraTrainTaskExecutor(TaskExecutor):
             logger.info(f"stdout:{stdout}")
             logger.info(f"stderr:{stderr}")
         except:
-            process.kill()
             logger.error(f"Training ex")
-            logger.ex(traceback.format_exc())
+            logger.exception(traceback.format_exc())
+            process.kill()
+            process.terminate()
+            process.poll()
             raise
         retcode = process.poll()
         t1 = time.time()

@@ -100,7 +100,7 @@ class HSubprocess:
                     interrupted.set()
                     process.terminate()
                     return
-                time.sleep(0.1)  # Adjust the sleep interval as needed
+                time.sleep(1)  # Adjust the sleep interval as needed
 
             # Ensure all output is processed
             stdout_thread.join()

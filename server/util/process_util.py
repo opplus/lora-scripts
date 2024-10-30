@@ -16,6 +16,23 @@ logger = get_task_logger(__name__)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+interrupt_processing_mutex = threading.RLock()
+interrupt_processing = False
+
+def interrupt_current_processing(value=True):
+    global interrupt_processing
+    global interrupt_processing_mutex
+    with interrupt_processing_mutex:
+        interrupt_processing = value
+
+def processing_interrupted():
+    global interrupt_processing
+    global interrupt_processing_mutex
+    with interrupt_processing_mutex:
+        return interrupt_processing
+
+
 class HSubprocess:
     process_instance = None
     process_instance_pid = None
@@ -79,8 +96,7 @@ class HSubprocess:
 
             # Periodically check if processing is interrupted
             while process.poll() is None:
-                global interrupt_train
-                if interrupt_train:
+                if processing_interrupted():
                     interrupted.set()
                     process.terminate()
                     return

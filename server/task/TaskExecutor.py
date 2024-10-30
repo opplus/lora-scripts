@@ -249,30 +249,9 @@ class LoraTrainTaskExecutor(TaskExecutor):
 
         process_instance.wait()
 
-
-        # process = subprocess.Popen(cmd_list, env=environ)
-        #
-        # try:
-        #     stdout, stderr = process.communicate()
-        #     logger.info(f"stdout:{stdout}")
-        #     logger.info(f"stderr:{stderr}")
-        # except:
-        #     logger.error(f"Training ex")
-        #     logger.exception(traceback.format_exc())
-        #     process.kill()
-        #     process.terminate()
-        #     process.poll()
-        #     raise
-        # retcode = process.poll()
         t1 = time.time()
         train_cost = t1 - t0
         logger.info("******train time {:.2f} seconds******".format(train_cost))
-        # if retcode != 0:
-        #     logger.error(f"Training failed")
-        #     del_file(os_base_dir)
-        #     del_file(os_output_dir)
-        #     return {"status": "fail", "cost": train_cost}
-        # else:
         logger.info(f"Training finished")
         # 增加训练成功后处理， 把训练成功的lora文件上传到oss
         train_result = self.build_train_result(config)

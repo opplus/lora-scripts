@@ -14,6 +14,7 @@ from server.task.CeleryApp import celery_app
 from server.task.CeleryTaskRequest import CeleryTaskRequest as TaskModel
 from server.task.TaskExecutor import dispatch_run
 from server.util.RedisClient import redis_client
+from server.util.process_util import interrupt_current_processing
 import torch
 # 获取服务器标识（例如主机名或IP地址）
 #server_ip = socket.gethostname()
@@ -25,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-interrupt_train = False
+
 def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5,ex=100):
     t1 = int(time.time())
     while True:
@@ -71,7 +72,7 @@ def process_dataset(
     task_id=self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
     allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
-    device_id, lock_name = lock_gpu(gpu_memory_threshold=16)
+    device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=180)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
         logger.info(f"process_dataset task {task_id}, {taskConfig}")
@@ -119,8 +120,7 @@ def process_loratrain(
         taskConfig,
 
 ):
-    global interrupt_train
-    interrupt_train = False
+    interrupt_current_processing(value=False)
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
     device_id, lock_name = lock_gpu(gpu_memory_threshold=18,ex=1800)
@@ -136,16 +136,16 @@ def process_loratrain(
             ret = dispatch_run(task, customize_env)
             return ret
         except Exception as e:
-            interrupt_train = True
             logger.exception(f"Task {task_id} failed due to an exception.")
             logger.exception(traceback.format_exc())
             raise self.retry(exc=e, countdown=30, max_retries=3)  # 30秒后重试
         finally:
-            gc.collect()
-            torch.cuda.empty_cache()
             # 任务完成或失败后释放锁
             logger.info(f"task sucessed or failed for task {task_id}")
             redis_client.delete(lock_name)
+            interrupt_current_processing(value=True)
+            gc.collect()
+            torch.cuda.empty_cache()
     else:
         # 如果 GPU 不可用或内存不足，将任务重新放回队列
         raise Reject("GPU resource unavailable", requeue=True)

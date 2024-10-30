@@ -234,53 +234,61 @@ class LoraTrainTaskExecutor(TaskExecutor):
 
         suggest_cpu_threads = 8 if len(train_utils.get_total_images(train_data_dir)) > 200 else 2
 
-        args = [
+        cmd_list = [
             sys.executable, "-m", "accelerate.commands.launch",  # use -m to avoid python script executable error
             "--num_cpu_threads_per_process", str(suggest_cpu_threads),  # cpu threads
             "--quiet",  # silence accelerate error message
             trainer_file,
             "--config_file", local_toml_path,
         ]
-        logger.info(f"subprocess args:{args}, environ:{environ}")
-        process = subprocess.Popen(args, env=environ)
+        logger.info(f"subprocess args:{cmd_list}, environ:{environ}")
 
-        try:
-            stdout, stderr = process.communicate()
-            logger.info(f"stdout:{stdout}")
-            logger.info(f"stderr:{stderr}")
-        except:
-            logger.error(f"Training ex")
-            logger.exception(traceback.format_exc())
-            process.kill()
-            process.terminate()
-            process.poll()
-            raise
-        retcode = process.poll()
+        from ..util.process_util import HSubprocess
+
+        process_instance = HSubprocess(cmd_list)
+
+        process_instance.wait()
+
+
+        # process = subprocess.Popen(cmd_list, env=environ)
+        #
+        # try:
+        #     stdout, stderr = process.communicate()
+        #     logger.info(f"stdout:{stdout}")
+        #     logger.info(f"stderr:{stderr}")
+        # except:
+        #     logger.error(f"Training ex")
+        #     logger.exception(traceback.format_exc())
+        #     process.kill()
+        #     process.terminate()
+        #     process.poll()
+        #     raise
+        # retcode = process.poll()
         t1 = time.time()
         train_cost = t1 - t0
         logger.info("******train time {:.2f} seconds******".format(train_cost))
-        if retcode != 0:
-            logger.error(f"Training failed")
-            del_file(os_base_dir)
-            del_file(os_output_dir)
-            return {"status": "fail", "cost": train_cost}
-        else:
-            logger.info(f"Training finished")
-            # 增加训练成功后处理， 把训练成功的lora文件上传到oss
-            train_result = self.build_train_result(config)
-            t2 = time.time()
-            total_cost = t2 - t0
-            result_cost = t2 - t1
-            del_file(os_base_dir)
-            # del_file(os_output_dir)
-            logger.info("******train time total {:.2f} seconds******".format(total_cost))
-            return {
-                "status": "success",
-                "data": train_result,
-                "cost": total_cost,
-                "train_cost": train_cost,
-                "result_cost": result_cost
-            }
+        # if retcode != 0:
+        #     logger.error(f"Training failed")
+        #     del_file(os_base_dir)
+        #     del_file(os_output_dir)
+        #     return {"status": "fail", "cost": train_cost}
+        # else:
+        logger.info(f"Training finished")
+        # 增加训练成功后处理， 把训练成功的lora文件上传到oss
+        train_result = self.build_train_result(config)
+        t2 = time.time()
+        total_cost = t2 - t0
+        result_cost = t2 - t1
+        del_file(os_base_dir)
+        # del_file(os_output_dir)
+        logger.info("******train time total {:.2f} seconds******".format(total_cost))
+        return {
+            "status": "success",
+            "data": train_result,
+            "cost": total_cost,
+            "train_cost": train_cost,
+            "result_cost": result_cost
+        }
 
     def build_train_result(self, trainConfig: dict):
         # retake_white_1

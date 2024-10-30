@@ -1,0 +1,105 @@
+import os
+import subprocess
+import sys
+import threading
+import time
+
+import logging
+
+from celery.utils.log import get_task_logger
+os.environ["PYTHONIOENCODING"] = "utf-8"
+
+CACHE_POOL = {}
+
+# 设置日志
+logger = get_task_logger(__name__)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+class HSubprocess:
+    process_instance = None
+    process_instance_pid = None
+    _mswindows = False
+
+    def __init__(self, args):
+        self.args = args
+
+    def stop(self):
+        if self.process_instance is not None:
+
+            self.process_instance.kill()
+            self.process_instance = None
+
+            try:
+                try:
+                    import psutil
+                except ImportError:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", "psutil"])
+                    import psutil
+                psutil.Process(self.process_instance_pid).terminate()
+            except Exception as e:
+                print(e)
+
+            self.process_instance_pid = None
+
+    def wait(self):
+        interrupted = threading.Event()
+
+        def read_stream(stream, log_func):
+            while not interrupted.is_set():
+                line = stream.readline()
+                if not line:
+                    break
+                log_func(line.strip())
+            stream.close()
+
+        try:
+            # Run the subprocess in the same terminal
+            process = subprocess.Popen(
+                self.args,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False,
+                text=True,
+                encoding="utf-8",
+            )
+
+            self.process_instance = process
+            self.process_instance_pid = process.pid
+            logger.info(f"Subprocess PID: {self.process_instance_pid}")
+
+            # Start threads to read stdout and stderr
+            stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, logging.info))
+            stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, logging.error))
+
+            stdout_thread.start()
+            stderr_thread.start()
+
+            # Periodically check if processing is interrupted
+            while process.poll() is None:
+                global interrupt_train
+                if interrupt_train:
+                    interrupted.set()
+                    process.terminate()
+                    return
+                time.sleep(0.1)  # Adjust the sleep interval as needed
+
+            # Ensure all output is processed
+            stdout_thread.join()
+            stderr_thread.join()
+
+            retcode = process.poll()
+            if retcode != 0:
+                raise subprocess.CalledProcessError(retcode, process.args)
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Subprocess failed with error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            raise
+        finally:
+            self.process_instance = None
+            self.process_instance_pid = None

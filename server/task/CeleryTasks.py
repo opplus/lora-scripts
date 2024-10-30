@@ -25,7 +25,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
+interrupt_train = False
 def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5,ex=100):
     t1 = int(time.time())
     while True:
@@ -119,6 +119,8 @@ def process_loratrain(
         taskConfig,
 
 ):
+    global interrupt_train
+    interrupt_train = False
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
     device_id, lock_name = lock_gpu(gpu_memory_threshold=18,ex=1800)
@@ -134,6 +136,7 @@ def process_loratrain(
             ret = dispatch_run(task, customize_env)
             return ret
         except Exception as e:
+            interrupt_train = True
             logger.exception(f"Task {task_id} failed due to an exception.")
             logger.exception(traceback.format_exc())
             raise self.retry(exc=e, countdown=30, max_retries=3)  # 30秒后重试

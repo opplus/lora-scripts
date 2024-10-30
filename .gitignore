@@ -28,3 +28,5 @@ config/
 huggingface/
 huggingface/hub/models*
 huggingface/hub/version_diffusers_cache.txt
+CodeFormer/**/*.pth
+CodeFormer/**/*.onnx

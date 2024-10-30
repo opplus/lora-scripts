@@ -100,6 +100,7 @@ class HSubprocess:
                 if processing_interrupted():
                     interrupted.set()
                     process.terminate()
+                    os.kill(self.process_instance_pid, signal.SIGKILL)
                     return
                 time.sleep(1)  # Adjust the sleep interval as needed
 
@@ -112,11 +113,11 @@ class HSubprocess:
                 raise subprocess.CalledProcessError(retcode, process.args)
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"Subprocess failed with error: {e}")
+            logger.error(f"Subprocess failed with error: pid:{self.process_instance_pid},  {e}")
             os.kill(self.process_instance_pid, signal.SIGKILL)
             raise
         except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            logger.error(f"An error occurred: pid:{self.process_instance_pid},  {e}")
             os.kill(self.process_instance_pid, signal.SIGKILL)
             raise
         finally:

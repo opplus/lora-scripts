@@ -43,8 +43,9 @@ def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
     logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
     for gpu in GPUs:
+        logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
         if bool(allowd_gpu_ids)==False or str(gpu.id) in allowd_gpu_ids.split(","):
-            logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
+            # logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
             if gpu.memoryFree > gpu_memory_threshold * 1024:
                 lock_name = f"{server_ip}:GPU{gpu.id}"
                 logger.info(f'do lock {lock_name}')

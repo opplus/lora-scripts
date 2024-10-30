@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -112,9 +113,11 @@ class HSubprocess:
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Subprocess failed with error: {e}")
+            os.kill(self.process_instance_pid, signal.SIGKILL)
             raise
         except Exception as e:
             logger.error(f"An error occurred: {e}")
+            os.kill(self.process_instance_pid, signal.SIGKILL)
             raise
         finally:
             self.process_instance = None

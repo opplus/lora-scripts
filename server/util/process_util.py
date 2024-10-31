@@ -37,10 +37,12 @@ def processing_interrupted():
 class HSubprocess:
     process_instance = None
     process_instance_pid = None
+    environ = None
     _mswindows = False
 
-    def __init__(self, args):
+    def __init__(self, args,environ):
         self.args = args
+        self.environ=environ
 
     def stop(self):
         if self.process_instance is not None:
@@ -82,11 +84,12 @@ class HSubprocess:
                 shell=False,
                 text=True,
                 encoding="utf-8",
+                env=self.environ
             )
 
             self.process_instance = process
             self.process_instance_pid = process.pid
-            logger.info(f"Subprocess PID: {self.process_instance_pid}")
+            logger.info(f"Subprocess PID: {self.process_instance_pid}  \n env:{self.environ}")
 
             # Start threads to read stdout and stderr
             stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, logging.info))

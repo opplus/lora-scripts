@@ -179,6 +179,18 @@ class LoraDatasetTaskExecutor(TaskExecutor):
         return {"status": "fail", "message": "error"}
 
 
+
+def change_ownership(path, uid, gid):
+# 更改当前文件或目录的所有者和所属组
+    os.chown(path, uid, gid)
+    # 如果是目录，则递归地更改该目录下的所有文件和子目录的所有者和所属组
+    if os.path.isdir(path):
+        for dirpath, dirnames, filenames in os.walk(path):
+            for d in dirnames:
+                os.chown(os.path.join(dirpath, d), uid, gid)
+            for f in filenames:
+                os.chown(os.path.join(dirpath, f), uid, gid)
+
 class LoraTrainTaskExecutor(TaskExecutor):
 
     def run(self, task: TaskModel, environ=None):
@@ -205,12 +217,20 @@ class LoraTrainTaskExecutor(TaskExecutor):
         output_name = config["output_name"]
         output_dir_prefix = f"{date}/{task_id}/{output_name}"
         # ./output/{output_dir_prefix}
+        # output_dir_prefix="test2"
         output_dir = f"./output/{output_dir_prefix}"
         config["output_dir_prefix"] = output_dir_prefix
         config["output_dir"] = output_dir
 
         os_base_dir = os.path.join(os.getcwd(), base_dir)
         os_output_dir = os.path.join(os.getcwd(), f"output/{output_dir_prefix}")
+
+
+        # is_real_gpuid = environ['is_real_gpuid']
+        # if is_real_gpuid is not None and is_real_gpuid=="1":
+        #     auth_dir = os.path.join(os.getcwd(), f"output/{output_dir_prefix}")
+        #     logger.info(f"change_ownership >>> {auth_dir}  to star:star")
+        #     change_ownership(auth_dir,"star","star")
 
         trainer_file = trainer_mapping[model_train_type]
         validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"],model_train_type)
@@ -240,6 +260,7 @@ class LoraTrainTaskExecutor(TaskExecutor):
         cmd_list = [
             sys.executable, "-m", "accelerate.commands.launch",  # use -m to avoid python script executable error
             "--num_cpu_threads_per_process", str(suggest_cpu_threads),  # cpu threads
+            "--num_processes","1",
             "--quiet",  # silence accelerate error message
             trainer_file,
             "--config_file", local_toml_path,
@@ -248,7 +269,7 @@ class LoraTrainTaskExecutor(TaskExecutor):
 
         from ..util.process_util import HSubprocess
 
-        process_instance = HSubprocess(cmd_list)
+        process_instance = HSubprocess(cmd_list,environ)
 
         process_instance.wait()
 

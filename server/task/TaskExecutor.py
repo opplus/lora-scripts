@@ -104,16 +104,19 @@ class LoraDatasetTaskExecutor(TaskExecutor):
         # 保存dataset到本地
         dataset_dir = self.save_dataset_2_local(task, base_dir)
 
+        is_real_gpuid = environ['is_real_gpuid']
         allowd_gpu_ids = environ['allowd_gpu_ids']
         CUDA_VISIBLE_DEVICES = environ['CUDA_VISIBLE_DEVICES']
         device_id_arr = allowd_gpu_ids.split(',')
         real_device_id = CUDA_VISIBLE_DEVICES.split(',')[0]
         device_id = 0
-        for idx in range(len(device_id_arr)):
-            if real_device_id == device_id_arr[idx]:
-                device_id = idx
-                break
-
+        if is_real_gpuid is  None or is_real_gpuid=="0":
+            for idx in range(len(device_id_arr)):
+                if real_device_id == device_id_arr[idx]:
+                    device_id = idx
+                    break
+        else:
+            device_id = int(real_device_id)
         # 图像预处理
         image_pre_processor(dataset_dir, device_id)
 

@@ -26,6 +26,11 @@ logging.basicConfig(
 )
 
 
+def _is_real_gpuid():
+    allowd_gpu_ids = os.getenv("LORA_ALLOWD_GPU_IDS")
+    if allowd_gpu_ids is None or len(str.strip(allowd_gpu_ids)) == 0:
+        return False
+    return True
 def _get_allow_gpu_ids():
     allowd_gpu_ids = os.getenv("LORA_ALLOWD_GPU_IDS")
     if allowd_gpu_ids is None or len(str.strip(allowd_gpu_ids)) == 0:
@@ -86,6 +91,7 @@ def process_dataset(
             customize_env = os.environ.copy()
             customize_env["ACCELERATE_DISABLE_RICH"] = "1"
             customize_env["PYTHONUNBUFFERED"] = "1"
+            customize_env["is_real_gpuid"] = "1" if _is_real_gpuid() else "0"
             customize_env["CUDA_VISIBLE_DEVICES"] = f'{device_id}'
             customize_env["allowd_gpu_ids"] = allowd_gpu_ids
             logger.info(f"Using GPU(s) / 使用 GPU: {device_id}")
@@ -129,6 +135,7 @@ def process_loratrain(
     interrupt_current_processing(value=False)
     task_id = self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
+    allowd_gpu_ids = _get_allow_gpu_ids()
     device_id, lock_name = lock_gpu(gpu_memory_threshold=18,ex=1800)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化
@@ -138,6 +145,8 @@ def process_loratrain(
             customize_env["ACCELERATE_DISABLE_RICH"] = "1"
             customize_env["PYTHONUNBUFFERED"] = "1"
             customize_env["CUDA_VISIBLE_DEVICES"] = f'{device_id}'
+            customize_env["allowd_gpu_ids"] = allowd_gpu_ids
+            customize_env["is_real_gpuid"] = "1" if _is_real_gpuid() else "0"
             logger.info(f"Using GPU(s) / 使用 GPU: {device_id}")
             ret = dispatch_run(task, customize_env)
             return ret

@@ -1,21 +1,20 @@
 import gc
 import logging
 import os
-import socket
 import time
 import traceback
 
 import GPUtil
+import torch
 from celery.exceptions import Reject
 from celery.utils.log import get_task_logger
 
-from mikazuki.app.models import APIResponse
 from server.task.CeleryApp import celery_app
 from server.task.CeleryTaskRequest import CeleryTaskRequest as TaskModel
 from server.task.TaskExecutor import dispatch_run
 from server.util.RedisClient import redis_client
 from server.util.process_util import interrupt_current_processing
-import torch
+
 # 获取服务器标识（例如主机名或IP地址）
 #server_ip = socket.gethostname()
 server_ip = os.getenv("SERVER_IP")
@@ -27,6 +26,12 @@ logging.basicConfig(
 )
 
 
+def _get_allow_gpu_ids():
+    allowd_gpu_ids = os.getenv("LORA_ALLOWD_GPU_IDS")
+    if allowd_gpu_ids is None or len(str.strip(allowd_gpu_ids)) == 0:
+        allowd_gpu_ids = os.getenv("CUDA_VISIBLE_DEVICES")
+    logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
+    return allowd_gpu_ids
 def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5,ex=100):
     t1 = int(time.time())
     while True:
@@ -40,8 +45,7 @@ def lock_gpu(gpu_memory_threshold=16, timeout=30,retry_interval=5,ex=100):
 
 def do_lock_gpu(gpu_memory_threshold=16,ex=100):
     GPUs = GPUtil.getGPUs()
-    allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
-    logger.info(f'allowd_gpu_ids:{allowd_gpu_ids}')
+    allowd_gpu_ids=_get_allow_gpu_ids()
     for gpu in GPUs:
         logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
         if bool(allowd_gpu_ids)==False or str(gpu.id) in allowd_gpu_ids.split(","):
@@ -73,7 +77,7 @@ def process_dataset(
 ):
     task_id=self._get_request().id
     task = TaskModel(task_id=task_id, taskType=taskType, taskConfig=taskConfig)
-    allowd_gpu_ids=os.getenv("CUDA_VISIBLE_DEVICES")
+    allowd_gpu_ids = _get_allow_gpu_ids()
     device_id, lock_name = lock_gpu(gpu_memory_threshold=16,ex=180)
     logger.info(f"{task_id} device_id, lock_name:{device_id, lock_name}")
     if device_id is not None:  # 如果设备可用且已模型初始化

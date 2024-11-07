@@ -1,6 +1,7 @@
 #!/bin/bash
 
-queue_priority=${queue_priority:-0}
+#queue_priority=${queue_priority:-0}
+queue_priority=1
 echo 'CELERY_WORKER_C:'[$CELERY_WORKER_C]
 echo 'SERVER_IP:'[$SERVER_IP]
 echo 'queue_priority:'[$queue_priority]

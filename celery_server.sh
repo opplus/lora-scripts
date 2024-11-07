@@ -8,7 +8,7 @@ echo 'queue_priority:'[$queue_priority]
 
 date_time=`date +"%Y%m%d%H%M"`
 
-pkill celery
+#pkill celery
 
 # 设置日志目录路径
 log_dir="logs"

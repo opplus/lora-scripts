@@ -45,7 +45,10 @@ redis==5.0.5
 gputil==1.4.0
 oss2==2.18.5
 alibabacloud_imageseg20191230
+lpips
+flash_attn==2.5.2
 # 单独安装
 # python -m pip install tb-nightly -i https://mirrors.aliyun.com/pypi/simple
 # pip install  basicsr==1.4.2  facexlib==0.3.0 gfpgan==1.3.8
 #  pip install realesrgan==0.3.0 --no-deps
+#  pip install xformers --no-deps

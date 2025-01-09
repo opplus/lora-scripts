@@ -12,7 +12,7 @@ from celery.utils.log import get_task_logger
 from server.task.CeleryApp import celery_app
 from server.task.CeleryTaskRequest import CeleryTaskRequest as TaskModel
 from server.task.TaskExecutor import dispatch_run
-from server.util.RedisClient import redis_client
+from server.util.RedisClient import redis_client,RedisClientClz
 from server.util.process_util import interrupt_current_processing
 
 # 获取服务器标识（例如主机名或IP地址）
@@ -57,7 +57,7 @@ def do_lock_gpu(gpu_memory_threshold=16,ex=100):
             # logger.info(f'gpu:{gpu.id} ,free:{gpu.memoryFree}')
             if gpu.memoryFree > gpu_memory_threshold * 1024:
                 lock_name = f"{server_ip}:GPU{gpu.id}"
-                logger.info(f'do lock {lock_name} redis_host:{redis_client.redis_host} ,redis_port:{redis_client.redis_port}, redis_db:{redis_client.redis_db}')
+                logger.info(f'do lock {lock_name} redis_host:{RedisClientClz.redis_host} ,redis_port:{RedisClientClz.redis_port}, redis_db:{RedisClientClz.redis_db}')
                 # 尝试获取锁
                 if redis_client.set(
                         lock_name, "1", nx=True, ex=ex

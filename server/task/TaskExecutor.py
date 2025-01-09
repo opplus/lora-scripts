@@ -316,10 +316,11 @@ class LoraTrainTaskExecutor(TaskExecutor):
         for lora_file in lora_files:
             lora_file_name = lora_file.split("/")[-1]  # retake_white_1-000002.safetensors
             lora_path = f'{lora_path_prefix}{output_dir_prefix}/{lora_file_name}'  # {date}/{taskId}/retake_white_1/retake_white_1-000002.safetensors
+            lora_local_path = f'{output_dir_prefix}/{lora_file_name}'  # {date}/{taskId}/retake_white_1/retake_white_1-000002.safetensors
             sample_file_name = None
             sample_file_osspath = ""
             oss_path = f"snapme/models/loras/train_lora/{lora_path}"
-            loca_file_path = os.path.join(os.getcwd(), f"output", lora_path)
+            loca_file_path = os.path.join(os.getcwd(), f"output", lora_local_path)
             oss.archive_upload_to_oss_with_retry(oss_path, loca_file_path)
 
 

@@ -32,3 +32,5 @@ for idx in $(seq 1 $CELERY_WORKER_C); do
   echo "=============================="
 
 done
+
+# celery -A server.task.CeleryTasks.celery_app worker -Q h_process_loratrain,process_loratrain,process_dataset -n lora_worker_celery_xiangongyun_0  --loglevel=info --pool=solo --heartbeat-interval=60 --time-limit=1800 >logs/lora_worker_celery_xiangongyun_log_0.txt 2>&1 &

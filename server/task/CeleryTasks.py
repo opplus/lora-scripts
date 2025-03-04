@@ -19,7 +19,7 @@ from server.util.process_util import interrupt_current_processing
 # 获取服务器标识（例如主机名或IP地址）
 # server_ip = socket.gethostname()
 server_ip = os.getenv("SERVER_IP")
-# 新增唯一客户端标识[5,7](@ref)
+# 新增唯一客户端标识[5,7]
 CLIENT_ID = f"{server_ip}-{uuid.uuid4().hex[:8]}"
 # 设置日志
 logger = get_task_logger(__name__)
@@ -50,52 +50,39 @@ def _get_allow_gpu_ids():
 
 def lock_gpu(support_max_gpu_num=1, gpu_memory_threshold=16, timeout=30,
              retry_interval=5, ex=100) -> Tuple[List[int], List[str]]:
-    """支持同时锁定多个GPU的版本"""
-    acquired_devices = []
-    acquired_locks = []
     t1 = time.time()
 
     while time.time() - t1 < timeout:
-        # 新增清空临时存储[2](@ref)
+        # 新增清空临时存储[2]
         tmp_devices = []
         tmp_locks = []
-
         # 获取可用GPU列表
         GPUs = GPUtil.getGPUs()
         allowd_gpu_ids = _get_allow_gpu_ids()
-
-        # 新增重试时释放残留锁的机制[2](@ref)
-        try:
-            for gpu in GPUs:
+        # 新增重试时释放残留锁的机制[2]
+        for gpu in GPUs:
+            try:
                 if len(tmp_devices) >= support_max_gpu_num:
                     break
-
                 if _is_gpu_available(gpu, allowd_gpu_ids, gpu_memory_threshold):
                     device_id, lock_name = _try_acquire_lock(gpu, ex)
                     if device_id is not None:
                         tmp_devices.append(device_id)
                         tmp_locks.append(lock_name)
-
-            # 成功获取足够数量锁[1](@ref)
-            if len(tmp_devices) >= support_max_gpu_num:
-                acquired_devices = tmp_devices
-                acquired_locks = tmp_locks
-                return acquired_devices, acquired_locks
-
-        finally:
-            # 部分获取失败时释放已获得的锁[2](@ref)
-            if len(tmp_devices) > 0:
-                release_gpu(tmp_locks)
-
+            except Exception as e:
+                logger.error(f"获取GPU失败: {str(e)}")
+        if len(tmp_devices) > 0:
+            acquired_devices = tmp_devices
+            acquired_locks = tmp_locks
+            return acquired_devices, acquired_locks
         time.sleep(retry_interval)
-
     return [], []
 
 
 def _try_acquire_lock(gpu, ex) -> tuple[Any, str] | tuple[None, None]:
     """带唯一标识的锁获取"""
     lock_name = f"{server_ip}:GPU{gpu.id}"
-    # 改用唯一值作为value[5,7](@ref)
+    # 改用唯一值作为value[5,7]
     unique_token = f"{CLIENT_ID}"
     if redis_client.set(
             lock_name,
@@ -112,7 +99,7 @@ def release_gpu(lock_names: List[str]):
     if not lock_names:
         return
 
-    # 使用Lua脚本保证原子性[5,7](@ref)
+    # 使用Lua脚本保证原子性[5,7]
     lua_script = """
     for i, key in ipairs(KEYS) do
         if redis.call("get", key) == ARGV[1] then

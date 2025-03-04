@@ -84,7 +84,7 @@ def lock_gpu(support_max_gpu_num=1, gpu_memory_threshold=16, timeout=30,
 
         finally:
             # 部分获取失败时释放已获得的锁[2](@ref)
-            if len(tmp_devices) < support_max_gpu_num and len(tmp_devices) > 0:
+            if len(tmp_devices) > 0:
                 release_gpu(tmp_locks)
 
         time.sleep(retry_interval)

@@ -256,7 +256,7 @@ class LoraTrainTaskExecutor(TaskExecutor):
         write_toml_file(local_toml_path, config)
 
         suggest_cpu_threads = 8 if len(train_utils.get_total_images(train_data_dir)) > 200 else 2
-        cuda_visible = os.getenv("CUDA_VISIBLE_DEVICES", "")
+        cuda_visible = environ.get("CUDA_VISIBLE_DEVICES", "")
         num_processes = len(cuda_visible.split(",")) if cuda_visible else 1
         cmd_list = [
             sys.executable, "-m", "accelerate.commands.launch",  # use -m to avoid python script executable error
@@ -266,7 +266,7 @@ class LoraTrainTaskExecutor(TaskExecutor):
             trainer_file,
             "--config_file", local_toml_path,
         ]
-        logger.info(f"subprocess args:{cmd_list}, environ:{environ}")
+        logger.info(f"subprocess cuda_visible:{cuda_visible} args:{cmd_list}, environ:{environ}")
 
         from ..util.process_util import HSubprocess
 

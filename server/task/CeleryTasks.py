@@ -30,7 +30,7 @@ def max_gpu_num():
     maxGpuNum = os.getenv("LORA_MAX_GPU_NUM")
     if maxGpuNum is None:
         return 1
-    return maxGpuNum
+    return int(maxGpuNum)
 
 def _is_real_gpuid():
     allowd_gpu_ids = os.getenv("LORA_ALLOWD_GPU_IDS")
